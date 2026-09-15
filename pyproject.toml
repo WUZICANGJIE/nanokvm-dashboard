@@ -1,0 +1,40 @@
+[project]
+name = "nanokvm-dashboard"
+version = "0.1.0"
+description = "A small, self-hosted NanoKVM dashboard with mDNS discovery."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "httpx>=0.28,<1",
+    "uvicorn>=0.34,<1",
+    "zeroconf>=0.148,<1",
+]
+
+[dependency-groups]
+dev = [
+    "build>=1.2,<2",
+    "pytest>=8.3,<10",
+    "pytest-asyncio>=1,<2",
+    "ruff>=0.11,<1",
+]
+browser = ["playwright>=1.51,<2"]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nanokvm_dashboard"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

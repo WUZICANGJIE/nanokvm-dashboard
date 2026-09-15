@@ -1,0 +1,16 @@
+services:
+  nanokvm-dashboard:
+    image: wuzicangjie/nanokvm-dashboard:latest
+    container_name: nanokvm-dashboard
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      PUID: "99"
+      PGID: "100"
+      TZ: Asia/Tokyo
+      # MDNS_INTERFACES: "192.168.1.10"  # This host's LAN IPv4, not a KVM address.
+      # DASHBOARD_USERNAME: "admin"
+      # DASHBOARD_PASSWORD: "${DASHBOARD_PASSWORD}"
+    volumes:
+      - /mnt/user/appdata/nanokvm-dashboard:/data
