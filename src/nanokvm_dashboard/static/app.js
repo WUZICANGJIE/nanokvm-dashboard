@@ -5,7 +5,7 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const translations = {
   zh: {
     dashboard: "设备面板", favorites: "收藏", settingsShort: "设置", heading: "我的设备",
-    deviceCount: "台设备", onlineCount: "台在线", addressHeading: "地址 / 主机名", status: "状态", response: "响应", actions: "操作", filters: "设备筛选",
+    deviceCount: "台设备", onlineCount: "台在线", addressHeading: "地址 / 主机名 / MAC", status: "状态", response: "响应", actions: "操作", filters: "设备筛选",
     addDevice: "添加设备", totalDevices: "设备总数", savedDevices: "已保存的控制台", online: "在线", offline: "离线",
     unknown: "待检查", unavailable: "待检查 / 离线", webReachable: "管理页面可达", keepRecords: "设备记录会继续保留",
     discoveryTitle: "自动发现已开启", scan: "扫描设备", scanning: "扫描中…",
@@ -25,14 +25,16 @@ const translations = {
     imported: "设备配置已导入", importError: "无法导入，请选择有效的设备 JSON 备份。", fileLarge: "备份文件不能超过 1 MB。",
     manual: "手动添加", discovered: "mDNS 发现", noNotes: "还没有备注", lastSeen: "上次在线", neverSeen: "尚未完成在线检查",
     refresh: "刷新状态", connectionError: "无法连接面板后端。显示的是上次结果，请检查容器是否运行。", requestError: "请求失败",
-    search: "搜索名称、地址或备注", notesPlaceholder: "这台 KVM 连接了哪台电脑？", namePlaceholder: "例如 kvm-server",
+    search: "搜索名称、地址、MAC 或备注", notesPlaceholder: "这台 KVM 连接了哪台电脑？", namePlaceholder: "例如 kvm-server",
+    macHint: "最近获取的 mDNS 广播 MAC；多个地址不对应特定 IP 或有线 / Wi-Fi 接口。",
+    macMissingHint: "尚未从设备的 mDNS 广播中获取 MAC 地址。",
     removePrompt: "确定移除这台设备吗？自动发现的设备会被暂时忽略，可在设置中恢复。", neverScanned: "等待首次扫描。",
     scanned: "上次扫描", candidateLabel: "个服务主机", verifiedLabel: "台 NanoKVM", interval: "自动扫描间隔", seconds: "秒",
     interfaces: "监听网卡", allInterfaces: "所有可用网卡", addresses: "已发现地址", scanFailed: "扫描失败", justNow: "刚刚",
   },
   en: {
     dashboard: "Dashboard", favorites: "Favorites", settingsShort: "Settings", heading: "My devices",
-    deviceCount: "devices", onlineCount: "online", addressHeading: "Address / hostname", status: "Status", response: "Response", actions: "Actions", filters: "Device filters",
+    deviceCount: "devices", onlineCount: "online", addressHeading: "Address / hostname / MAC", status: "Status", response: "Response", actions: "Actions", filters: "Device filters",
     addDevice: "Add device", totalDevices: "Total devices", savedDevices: "Saved consoles", online: "Online", offline: "Offline",
     unknown: "Unchecked", unavailable: "Unchecked / offline", webReachable: "Web interface reachable", keepRecords: "Your devices stay saved",
     discoveryTitle: "Auto-discovery enabled", scan: "Scan devices", scanning: "Scanning…",
@@ -52,7 +54,9 @@ const translations = {
     imported: "Device backup imported", importError: "Choose a valid device JSON backup.", fileLarge: "Backup files must be smaller than 1 MB.",
     manual: "Manual", discovered: "mDNS", noNotes: "No notes yet", lastSeen: "Last online", neverSeen: "Waiting for the first status check",
     refresh: "Refresh status", connectionError: "Can't reach the dashboard backend. Showing previous results. Check that the container is running.", requestError: "Request failed",
-    search: "Search names, addresses, or notes", notesPlaceholder: "Which computer is connected to this KVM?", namePlaceholder: "For example, kvm-server",
+    search: "Search names, addresses, MACs, or notes", notesPlaceholder: "Which computer is connected to this KVM?", namePlaceholder: "For example, kvm-server",
+    macHint: "Last received mDNS MACs; not mapped to specific IPs or wired / Wi-Fi interfaces.",
+    macMissingHint: "No MAC address has been received in this device's mDNS advertisements.",
     removePrompt: "Remove this device? Discovered devices will be ignored until you restore them in Settings.", neverScanned: "Waiting for the first scan.",
     scanned: "Last scan", candidateLabel: "service hosts", verifiedLabel: "NanoKVMs", interval: "Discovery interval", seconds: "seconds",
     interfaces: "Interfaces", allInterfaces: "All available interfaces", addresses: "Discovered addresses", scanFailed: "Discovery failed", justNow: "just now",
@@ -176,7 +180,7 @@ function render() {
   });
 
   const visible = state.devices.filter((device) => {
-    const haystack = [device.name, device.url, device.hostname, device.notes, ...(device.addresses || [])].join(" ").toLowerCase();
+    const haystack = [device.name, device.url, device.hostname, device.notes, ...(device.addresses || []), ...(device.mac_addresses || [])].join(" ").toLowerCase();
     const matchesFilter = state.filter === "all" || (state.filter === "favorites" ? device.favorite : device.status === state.filter);
     return matchesFilter && haystack.includes(state.search.toLowerCase());
   });
@@ -196,11 +200,15 @@ function render() {
     translate(card);
     $(".device-row", card).dataset.id = device.id;
     $(".device-name", card).textContent = device.name;
-    $(".device-name", card).title = device.name;
+    $(".device-name", card).title = `${t("openConsole")}: ${device.name}`;
+    $(".device-name", card).href = device.url;
     $(".device-hostname", card).textContent = device.hostname || "";
     $(".device-hostname", card).title = device.hostname || "";
     $(".device-address", card).textContent = device.url;
     $(".device-address", card).title = `${device.url}\n${t("addresses")}: ${(device.addresses || []).join(", ")}`;
+    const macs = device.mac_addresses || [];
+    $(".device-macs", card).textContent = macs.length ? macs.join("\n") : "—";
+    $(".device-macs", card).title = t(macs.length ? "macHint" : "macMissingHint");
     $(".device-notes", card).textContent = device.notes || "—";
     $(".device-notes", card).title = device.notes || t("noNotes");
     $(".status-label", card).textContent = t(device.status);

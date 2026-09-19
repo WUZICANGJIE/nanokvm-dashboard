@@ -26,7 +26,9 @@ async def run(args):
             print(json.dumps({
                 "discovery": service.status(),
                 "devices": [
-                    {key: device[key] for key in ("name", "hostname", "url", "addresses", "status")}
+                    {key: device[key] for key in (
+                        "name", "hostname", "url", "addresses", "mac_addresses", "status",
+                    )}
                     for device in store.list()
                 ],
             }, ensure_ascii=False, indent=2))

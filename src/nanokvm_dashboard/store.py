@@ -33,6 +33,13 @@ class Store:
             );
             CREATE TABLE IF NOT EXISTS ignored (identity TEXT PRIMARY KEY);
         """)
+        # Existing installations predate MAC metadata. Upgrade in place without losing devices.
+        columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(devices)")}
+        if "mac_addresses" not in columns:
+            with self.connection:
+                self.connection.execute(
+                    "ALTER TABLE devices ADD COLUMN mac_addresses TEXT NOT NULL DEFAULT '[]'"
+                )
         # A stored successful check is not evidence that a device is online after a restart.
         with self.connection:
             self.connection.execute(
@@ -48,6 +55,7 @@ class Store:
             return None
         result = dict(row)
         result["addresses"] = json.loads(result["addresses"])
+        result["mac_addresses"] = json.loads(result["mac_addresses"])
         for key in ("favorite", "custom_name", "custom_url"):
             result[key] = bool(result[key])
         return result
@@ -117,9 +125,10 @@ class Store:
             "SELECT 1 FROM ignored WHERE identity=?", ("mdns:" + hostname.lower().rstrip("."),)
         ).fetchone() is not None
 
-    def upsert_discovery(self, hostname, addresses, url):
+    def upsert_discovery(self, hostname, addresses, url, mac_addresses=()):
         hostname = hostname.lower().rstrip(".")
         identity = "mdns:" + hostname
+        mac_addresses = sorted(set(mac_addresses))
         if self.is_ignored(hostname):
             return None
         device = self.decode(
@@ -140,18 +149,20 @@ class Store:
             if device:
                 self.connection.execute(
                     """UPDATE devices SET identity=?,hostname=?,addresses=?,source='mdns',
-                    url=CASE WHEN custom_url=0 THEN ? ELSE url END WHERE id=?""",
-                    (identity, hostname, json.dumps(addresses), url, device["id"]),
+                    url=CASE WHEN custom_url=0 THEN ? ELSE url END,
+                    mac_addresses=? WHERE id=?""",
+                    (identity, hostname, json.dumps(addresses), url,
+                     json.dumps(mac_addresses or device["mac_addresses"]), device["id"]),
                 )
                 device_id = device["id"]
             else:
                 device_id = str(uuid.uuid4())
                 self.connection.execute(
                     """INSERT INTO devices
-                    (id,identity,name,url,hostname,addresses,source,created_at)
-                    VALUES (?,?,?,?,?,?,'mdns',?)""",
+                    (id,identity,name,url,hostname,addresses,source,created_at,mac_addresses)
+                    VALUES (?,?,?,?,?,?,'mdns',?,?)""",
                     (device_id, identity, hostname.removesuffix(".local"), url,
-                     hostname, json.dumps(addresses), now()),
+                     hostname, json.dumps(addresses), now(), json.dumps(mac_addresses)),
                 )
         return self.get(device_id)
 

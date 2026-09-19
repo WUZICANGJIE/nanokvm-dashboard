@@ -47,19 +47,19 @@
     </div>
     <table class="device-table hidden" aria-label="设备列表">
       <colgroup><col class="favorite-column"><col class="name-column"><col class="address-column"><col class="status-column"><col class="latency-column"><col class="notes-column"><col class="actions-column"></colgroup>
-      <thead><tr><th scope="col"><span class="sr-only" data-i18n="favorites">收藏</span></th><th scope="col" data-i18n="name">设备名称</th><th scope="col" data-i18n="addressHeading">地址 / 主机名</th><th scope="col" data-i18n="status">状态</th><th scope="col" data-i18n="response">响应</th><th scope="col" data-i18n="notes">备注</th><th scope="col" class="actions-heading" data-i18n="actions">操作</th></tr></thead>
+      <thead><tr><th scope="col"><span class="sr-only" data-i18n="favorites">收藏</span></th><th scope="col" data-i18n="name">设备名称</th><th scope="col" data-i18n="addressHeading">地址 / 主机名 / MAC</th><th scope="col" data-i18n="status">状态</th><th scope="col" data-i18n="response">响应</th><th scope="col" data-i18n="notes">备注</th><th scope="col" class="actions-heading" data-i18n="actions">操作</th></tr></thead>
       <tbody id="device-list"></tbody>
     </table>
     <div id="empty-state" class="empty-state"><h2 id="empty-title" data-i18n="emptyTitle">还没有设备</h2><p id="empty-message" data-i18n="emptyHint">打开 NanoKVM 的 mDNS，然后扫描设备。也可以手动添加地址。</p><button class="button secondary" id="empty-add"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="manualAdd">手动添加第一台设备</span></button></div>
     <div class="discovery-panel" role="status"><span class="discovery-status"><span class="dot" aria-hidden="true"></span><span id="discovery-title">自动发现</span></span><span id="discovery-message"></span></div>
-    <footer><span data-i18n="statusNote">在线状态仅代表 Web 页面可达，不代表受控电脑电源或 HDMI 状态。</span><a href="https://github.com/WUZICANGJIE/nanokvm-dashboard" target="_blank" rel="noopener noreferrer">NanoKVM Dashboard · <span id="app-version">v0.1.0</span> ↗</a></footer>
+    <footer><span data-i18n="statusNote">在线状态仅代表 Web 页面可达，不代表受控电脑电源或 HDMI 状态。</span><a href="https://github.com/WUZICANGJIE/nanokvm-dashboard" target="_blank" rel="noopener noreferrer">NanoKVM Dashboard · <span id="app-version">…</span> ↗</a></footer>
   </main>
 
   <template id="device-template">
     <tr class="device-row">
       <td class="favorite-cell"><button class="icon-button favorite-button" aria-label="收藏"><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg></button></td>
-      <th scope="row" class="name-cell"><span class="device-name"></span><span class="source-badge"></span></th>
-      <td class="address-cell"><div class="device-address mono"></div><div class="device-hostname mono"></div></td>
+      <th scope="row" class="name-cell"><a class="device-name" target="_blank" rel="noopener noreferrer"></a><span class="source-badge"></span></th>
+      <td class="address-cell"><div class="device-address mono"></div><div class="device-hostname mono"></div><div class="device-macs mono"></div></td>
       <td class="status-cell"><span class="status-badge"><span class="dot" aria-hidden="true"></span><span class="status-label"></span></span><div class="last-seen"></div></td>
       <td class="latency-cell"><span class="mobile-label" data-i18n="response">响应</span><span class="latency mono"></span></td>
       <td class="notes-cell"><p class="device-notes"></p></td>

@@ -94,6 +94,7 @@ class DashboardService:
                                 return
                             device = self.store.upsert_discovery(
                                 candidate.hostname, sorted(candidate.addresses), result.url or url,
+                                sorted(candidate.mac_addresses),
                             )
                             if device:
                                 # Discovery checks the advertised address. A user's custom URL is

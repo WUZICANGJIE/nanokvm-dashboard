@@ -75,6 +75,7 @@ input::placeholder, textarea::placeholder { color: var(--faint); opacity: 1; }
 .device-address, .device-hostname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .device-hostname { font-size: 11px; margin-top: 3px; color: var(--faint); }
 .device-hostname:empty { display: none; }
+.device-macs { margin-top: 3px; font-size: 11px; color: var(--muted); overflow-wrap: anywhere; white-space: pre-line; }
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex-shrink: 0; }
 .dot.online { background: var(--online); }
 .status-badge { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); white-space: nowrap; }
@@ -85,7 +86,7 @@ input::placeholder, textarea::placeholder { color: var(--faint); opacity: 1; }
 .device-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 .open-console { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; padding: 8px 0; margin-right: 8px; font-size: 12px; }
 .open-console .icon { width: 14px; height: 14px; }
-.open-console:hover { text-decoration: underline; text-underline-offset: 4px; }
+.open-console:hover, .device-name:hover { text-decoration: underline; text-underline-offset: 4px; }
 .discovery-panel { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; color: var(--faint); font-size: 11px; margin-top: 19px; overflow-wrap: anywhere; }
 .discovery-status { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .discovery-status .dot { background: var(--online); }

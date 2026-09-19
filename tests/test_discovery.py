@@ -1,7 +1,9 @@
 from types import SimpleNamespace
 
+import pytest
+
 from nanokvm_dashboard.config import Settings
-from nanokvm_dashboard.discovery import Candidate, Discovery, merge_service
+from nanokvm_dashboard.discovery import Candidate, Discovery, merge_service, workstation_mac
 from nanokvm_dashboard.probe import ProbeResult
 from nanokvm_dashboard.service import DashboardService
 from nanokvm_dashboard.store import Store
@@ -23,12 +25,54 @@ def test_workstation_and_http_services_group_wired_and_wireless():
     assert not any(":9" in url for url in device.urls)
 
 
+@pytest.mark.parametrize(("instance", "expected"), [
+    ("Desk [02:AB:CD:12:34:56]", "02:ab:cd:12:34:56"),
+    ("Desk [00:11:22:33:44:55]", "00:11:22:33:44:55"),
+    ("Desk", None),
+    ("Desk [00:00:00:00:00:00]", None),
+    ("Desk [ff:ff:ff:ff:ff:ff]", None),
+    ("Desk [01:11:22:33:44:55]", None),
+    ("Desk [02:ab:cd:12:34]", None),
+    ("Desk [02:ab:cd:12:34:zz]", None),
+    ("Desk [02:ab:cd:12:34:56:78]", None),
+    ("Desk [02:ab:cd:12:34:56] trailing", None),
+])
+def test_workstation_mac_validation(instance, expected):
+    kind = "_workstation._tcp.local."
+    assert workstation_mac(f"{instance}.{kind}", kind) == expected
+    assert workstation_mac(f"{instance}._http._tcp.local.", "_http._tcp.local.") is None
+    assert workstation_mac(f"{instance}._http._tcp.local.", kind) is None
+
+
+def test_mac_metadata_deduplicates_without_merging_different_hostnames():
+    candidates = {}
+    kind = "_workstation._tcp.local."
+    for hostname, mac in [
+        ("desk.local.", "02:AB:CD:12:34:56"),
+        ("desk.local.", "02:ab:cd:12:34:56"),
+        ("desk.local.", "02:ab:cd:12:34:57"),
+        ("other.local.", "02:ab:cd:12:34:56"),
+    ]:
+        info = SimpleNamespace(
+            server=hostname, name=f"Desk [{mac}].{kind}", port=9,
+            parsed_addresses=lambda: ["192.168.1.10"],
+        )
+        merge_service(candidates, info, kind)
+    assert len(candidates) == 2
+    assert candidates["desk.local"].mac_addresses == {
+        "02:ab:cd:12:34:56", "02:ab:cd:12:34:57",
+    }
+    assert candidates["other.local"].mac_addresses == {"02:ab:cd:12:34:56"}
+
+
 async def test_only_verified_kvm_pages_become_devices(tmp_path):
     class FakeDiscovery:
         async def scan(self, duration):
             return [
-                Candidate("custom-name.local", {"192.168.1.10"}, ["http://192.168.1.10"]),
-                Candidate("printer.local", {"192.168.1.11"}, ["http://192.168.1.11"]),
+                Candidate("custom-name.local", {"192.168.1.10"}, ["http://192.168.1.10"],
+                          {"02:ab:cd:12:34:56"}),
+                Candidate("printer.local", {"192.168.1.11"}, ["http://192.168.1.11"],
+                          {"02:ab:cd:12:34:57"}),
             ]
 
         async def close(self):
@@ -47,6 +91,7 @@ async def test_only_verified_kvm_pages_become_devices(tmp_path):
     assert service.candidate_count == 2
     assert service.verified_count == 1
     assert store.list()[0]["hostname"] == "custom-name.local"
+    assert store.list()[0]["mac_addresses"] == ["02:ab:cd:12:34:56"]
     assert len(store.list()) == 1
     await service.close()
     store.close()

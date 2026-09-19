@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from dataclasses import dataclass, field
 
 from zeroconf import InterfaceChoice, IPVersion, ServiceStateChange
@@ -20,6 +21,27 @@ SERVICE_TYPES = (
 )
 
 
+def workstation_mac(name: str, service_type: str) -> str | None:
+    """Read the interface MAC from Avahi's 'hostname [MAC]' service instance.
+
+    This is advertised metadata, not device identity or an IP-to-MAC mapping.
+    https://github.com/avahi/avahi/blob/master/avahi-core/iface.c
+    """
+    if service_type != "_workstation._tcp.local.":
+        return None
+    suffix = "." + service_type
+    if not name.lower().endswith(suffix):
+        return None
+    match = re.search(r" \[([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})\]$", name[:-len(suffix)])
+    if not match:
+        return None
+    mac = match[1].lower()
+    # Ignore unspecified, multicast, and broadcast addresses; locally administered is valid.
+    if mac == "00:00:00:00:00:00" or int(mac[:2], 16) & 1:
+        return None
+    return mac
+
+
 def address_url(address, scheme="http", port=None):
     host = f"[{address}]" if ":" in address else address
     suffix = f":{port}" if port and port != (443 if scheme == "https" else 80) else ""
@@ -31,6 +53,7 @@ class Candidate:
     hostname: str
     addresses: set[str] = field(default_factory=set)
     urls: list[str] = field(default_factory=list)
+    mac_addresses: set[str] = field(default_factory=set)
 
 
 def merge_service(candidates: dict[str, Candidate], info, service_type):
@@ -40,6 +63,8 @@ def merge_service(candidates: dict[str, Candidate], info, service_type):
         return
     candidate = candidates.setdefault(hostname, Candidate(hostname))
     candidate.addresses.update(addresses)
+    if mac := workstation_mac(getattr(info, "name", ""), service_type):
+        candidate.mac_addresses.add(mac)
     for address in addresses:
         if service_type in {"_http._tcp.local.", "_https._tcp.local."}:
             scheme = "https" if service_type.startswith("_https") else "http"

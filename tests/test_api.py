@@ -30,6 +30,7 @@ def test_device_crud_import_validation_and_static_assets(tmp_path):
         created = client.post("/api/devices", json=data)
         assert created.status_code == 201
         device = created.json()
+        assert device["mac_addresses"] == []
         assert device["url"] == "http://192.168.1.10"
         assert client.post("/api/devices", json=data).status_code == 409
         assert client.post("/api/discovery").status_code == 409

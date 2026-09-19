@@ -13,6 +13,8 @@ from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
 
+from nanokvm_dashboard import __version__
+
 
 def create_test_app():
     from nanokvm_dashboard.app import create_app
@@ -40,6 +42,7 @@ def check_table_layout(browser, base, screenshots):
         {
             "id": str(index), "name": name, "url": f"http://192.168.50.{101 + index}",
             "hostname": f"kvm-0{index + 1}.local", "addresses": [f"192.168.50.{101 + index}"],
+            "mac_addresses": ["02:ab:cd:12:34:56", "02:ab:cd:12:34:57"] if index == 0 else [],
             "notes": note, "source": "mdns", "favorite": index == 0,
             "status": status, "latency_ms": 12 if status == "online" else None,
             "last_seen": (now - timedelta(hours=2)).isoformat() if status == "offline" else None,
@@ -57,7 +60,7 @@ def check_table_layout(browser, base, screenshots):
         "interval": 60, "interfaces": [],
     }
     page.route("**/api/devices", lambda route: route.fulfill(json={
-        "devices": devices, "discovery": discovery, "version": "0.1.0",
+        "devices": devices, "discovery": discovery, "version": __version__,
     }))
     page.goto(base)
     expect(page.locator(".device-row")).to_have_count(3)
@@ -65,6 +68,10 @@ def check_table_layout(browser, base, screenshots):
     expect(page.locator("#count-offline")).to_have_text("1")
     expect(page.locator(".open-console").first).to_have_attribute("href", devices[0]["url"])
     expect(page.locator(".open-console").first).to_have_attribute("target", "_blank")
+    expect(page.locator(".device-macs").first).to_have_text(
+        "02:ab:cd:12:34:56\n02:ab:cd:12:34:57"
+    )
+    expect(page.locator(".device-macs").nth(1)).to_have_text("—")
     page.screenshot(path=str(screenshots / "table-dark.png"), full_page=True)
     for selection, count in [("online", 2), ("offline", 1), ("favorites", 1), ("all", 3)]:
         button = page.locator(f'[data-filter="{selection}"]')
@@ -73,6 +80,8 @@ def check_table_layout(browser, base, screenshots):
         expect(page.locator(".device-row")).to_have_count(count)
     page.locator("#search").fill("kvm-02")
     expect(page.locator(".device-name")).to_have_text("家庭服务器")
+    page.locator("#search").fill("AB:CD:12:34:57")
+    expect(page.locator(".device-name")).to_have_text("工作站")
     page.locator("#search").fill("missing-device")
     expect(page.locator(".device-table")).to_be_hidden()
     expect(page.locator("#empty-title")).to_have_text("没有符合条件的设备")
@@ -109,6 +118,11 @@ def check_table_layout(browser, base, screenshots):
                 "elements => elements.every(el => el.scrollWidth <= el.clientWidth)"
             ), (language, width, "action overflow")
             expect(page.locator(".edit-button").first).to_be_visible()
+            expect(page.locator(".device-macs").first).to_contain_text("02:ab:cd:12:34:57")
+            assert page.locator(".device-macs").evaluate_all(
+                "elements => elements.every(el => el.scrollWidth <= el.clientWidth)"
+            ), (language, width, "MAC overflow")
+        expect(page.locator(".device-macs").nth(1)).to_have_text("—")
 
     # Scan controls and errors still belong to the real discovery workflow.
     discovery["scanning"] = True
@@ -212,8 +226,8 @@ def main():
                     browser.close()
                 print(
                     "Browser smoke test passed: CRUD, escaping, persistence, "
-                    "favorite, search, export, theme, table filters, discovery states, "
-                    "long content, responsive layouts in Chinese and English."
+                    "favorite, search, MAC metadata, export, theme, table filters, "
+                    "discovery states, long content, responsive layouts in Chinese and English."
                 )
             finally:
                 process.terminate()
