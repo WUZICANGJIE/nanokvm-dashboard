@@ -1,6 +1,6 @@
 [project]
 name = "nanokvm-dashboard"
-version = "0.2.0"
+version = "0.2.1"
 description = "A small, self-hosted NanoKVM dashboard with mDNS discovery."
 readme = "README.md"
 requires-python = ">=3.12"

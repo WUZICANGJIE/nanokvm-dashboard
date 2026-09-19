@@ -87,9 +87,9 @@ input::placeholder, textarea::placeholder { color: var(--faint); opacity: 1; }
 .open-console { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; padding: 8px 0; margin-right: 8px; font-size: 12px; }
 .open-console .icon { width: 14px; height: 14px; }
 .open-console:hover, .device-name:hover { text-decoration: underline; text-underline-offset: 4px; }
-.discovery-panel { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; color: var(--faint); font-size: 11px; margin-top: 19px; overflow-wrap: anywhere; }
-.discovery-status { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.discovery-status .dot { background: var(--online); }
+.discovery-panel { display: grid; grid-template-columns: 6px minmax(0, 1fr); column-gap: 8px; color: var(--faint); font-size: 11px; line-height: 1.6; margin-top: 19px; overflow-wrap: anywhere; }
+.discovery-copy { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+.discovery-panel > .dot { background: var(--online); margin-top: calc(.8em - 3px); }
 .discovery-panel.disabled .dot { background: var(--faint); }
 .discovery-panel.failed .dot { background: var(--danger); }
 .discovery-panel.failed #discovery-message { color: var(--danger); }
@@ -183,7 +183,8 @@ input[type="checkbox"] { accent-color: var(--primary); width: 16px; height: 16px
   .device-row > .actions-cell { grid-column: 1 / -1; grid-row: 5; border-top: 1px solid var(--border); padding-top: 8px; }
   .device-actions { gap: 6px; }
   .open-console { margin-right: auto; min-height: 40px; font-size: 13px; }
-  .discovery-panel { gap: 6px; flex-direction: column; margin-top: 18px; }
+  .discovery-panel { margin-top: 18px; }
+  .discovery-copy { flex-direction: column; align-items: flex-start; gap: 6px; }
   footer { flex-direction: column; gap: 12px; margin-top: 52px; font-size: 10px; }
   dialog { padding: 22px; }
   .dialog-actions { flex-wrap: wrap; }

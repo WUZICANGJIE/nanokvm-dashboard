@@ -8,7 +8,7 @@ const translations = {
     deviceCount: "台设备", onlineCount: "台在线", addressHeading: "地址 / 主机名 / MAC", status: "状态", response: "响应", actions: "操作", filters: "设备筛选",
     addDevice: "添加设备", totalDevices: "设备总数", savedDevices: "已保存的控制台", online: "在线", offline: "离线",
     unknown: "待检查", unavailable: "待检查 / 离线", webReachable: "管理页面可达", keepRecords: "设备记录会继续保留",
-    discoveryTitle: "自动发现已开启", scan: "扫描设备", scanning: "扫描中…",
+    discoveryTitle: "每 {seconds} 秒自动扫描", scan: "扫描设备", scanning: "扫描中…",
     scanProgress: "正在查找并确认设备…", disabled: "自动发现已关闭", disabledHint: "可手动添加设备。",
     all: "全部", emptyTitle: "还没有设备", emptyHint: "打开 NanoKVM 的 mDNS，然后扫描设备。也可以手动添加地址。",
     manualAdd: "手动添加第一台设备", noResults: "没有符合条件的设备", noResultsHint: "试试其他搜索词，或切换设备筛选。",
@@ -37,7 +37,7 @@ const translations = {
     deviceCount: "devices", onlineCount: "online", addressHeading: "Address / hostname / MAC", status: "Status", response: "Response", actions: "Actions", filters: "Device filters",
     addDevice: "Add device", totalDevices: "Total devices", savedDevices: "Saved consoles", online: "Online", offline: "Offline",
     unknown: "Unchecked", unavailable: "Unchecked / offline", webReachable: "Web interface reachable", keepRecords: "Your devices stay saved",
-    discoveryTitle: "Auto-discovery enabled", scan: "Scan devices", scanning: "Scanning…",
+    discoveryTitle: "Auto-scan every {seconds} s", scan: "Scan devices", scanning: "Scanning…",
     scanProgress: "Finding and verifying devices…", disabled: "Auto-discovery disabled", disabledHint: "You can add devices manually.",
     all: "All", emptyTitle: "No devices yet", emptyHint: "Enable mDNS on your NanoKVMs, then scan for devices. Or add an address yourself.",
     manualAdd: "Add your first device", noResults: "No matching devices", noResultsHint: "Try another search or change the device filter.",
@@ -165,7 +165,7 @@ function render() {
   $("#scan").disabled = !!discovery.scanning || discovery.enabled === false;
   $("#scan span").textContent = t(discovery.scanning ? "scanning" : "scan");
   $("#refresh").classList.toggle("busy", !!discovery.refreshing);
-  $("#discovery-title").textContent = t(discovery.enabled === false ? "disabled" : "discoveryTitle");
+  $("#discovery-title").textContent = t(discovery.enabled === false ? "disabled" : "discoveryTitle").replace("{seconds}", discovery.interval || 60);
   let message = t("neverScanned");
   if (discovery.enabled === false) message = t("disabledHint");
   else if (discovery.scanning) message = t("scanProgress");
