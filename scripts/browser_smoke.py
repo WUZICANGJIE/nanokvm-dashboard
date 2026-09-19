@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import urllib.request
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
@@ -26,6 +27,100 @@ def create_test_app():
             pass
 
     return create_app(Settings.from_env(), BrowserService)
+
+
+def check_table_layout(browser, base, screenshots):
+    """Exercise table states with synthetic responses; never contact real devices."""
+    context = browser.new_context(viewport={"width": 1200, "height": 800}, locale="zh-CN")
+    page = context.new_page()
+    errors = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    now = datetime.now(UTC)
+    devices = [
+        {
+            "id": str(index), "name": name, "url": f"http://192.168.50.{101 + index}",
+            "hostname": f"kvm-0{index + 1}.local", "addresses": [f"192.168.50.{101 + index}"],
+            "notes": note, "source": "mdns", "favorite": index == 0,
+            "status": status, "latency_ms": 12 if status == "online" else None,
+            "last_seen": (now - timedelta(hours=2)).isoformat() if status == "offline" else None,
+            "last_checked": now.isoformat(), "error": "" if status != "offline" else "Timeout",
+        }
+        for index, (name, note, status) in enumerate([
+            ("工作站", "主力电脑", "online"),
+            ("家庭服务器", "实验环境", "online"),
+            ("备用主机", "备用设备", "offline"),
+        ])
+    ]
+    discovery = {
+        "enabled": True, "scanning": False, "refreshing": False, "error": "",
+        "last_scan": now.isoformat(), "candidates": 3, "verified": 3,
+        "interval": 60, "interfaces": [],
+    }
+    page.route("**/api/devices", lambda route: route.fulfill(json={
+        "devices": devices, "discovery": discovery, "version": "0.1.0",
+    }))
+    page.goto(base)
+    expect(page.locator(".device-row")).to_have_count(3)
+    expect(page.locator("#count-online")).to_have_text("2")
+    expect(page.locator("#count-offline")).to_have_text("1")
+    expect(page.locator(".open-console").first).to_have_attribute("href", devices[0]["url"])
+    expect(page.locator(".open-console").first).to_have_attribute("target", "_blank")
+    page.screenshot(path=str(screenshots / "table-dark.png"), full_page=True)
+    for selection, count in [("online", 2), ("offline", 1), ("favorites", 1), ("all", 3)]:
+        button = page.locator(f'[data-filter="{selection}"]')
+        button.click()
+        expect(button).to_have_attribute("aria-pressed", "true")
+        expect(page.locator(".device-row")).to_have_count(count)
+    page.locator("#search").fill("kvm-02")
+    expect(page.locator(".device-name")).to_have_text("家庭服务器")
+    page.locator("#search").fill("missing-device")
+    expect(page.locator(".device-table")).to_be_hidden()
+    expect(page.locator("#empty-title")).to_have_text("没有符合条件的设备")
+    page.locator("#search").fill("")
+    page.locator("#settings-open").click()
+    page.locator("#theme-toggle").click()
+    page.locator("#settings-dialog .dialog-close").click()
+    page.screenshot(path=str(screenshots / "table-light.png"), full_page=True)
+    page.reload()
+    expect(page.locator("html")).to_have_attribute("data-theme", "light")
+    page.locator("#settings-open").click()
+    page.locator("#theme-toggle").click()
+    page.locator("#settings-dialog .dialog-close").click()
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.screenshot(path=str(screenshots / "table-mobile.png"), full_page=True)
+
+    # Long user content must not push controls off screen, in either language.
+    devices[0].update(name="Long-device-name-" * 6, notes="Long note " * 100,
+                      url="https://kvm-01.local/" + "path" * 80, status="unknown")
+    page.reload()
+    expect(page.locator("#count-online")).to_have_text("1")
+    expect(page.locator("#count-offline")).to_have_text("1")
+    expect(page.locator(".status-label").first).to_have_text("待检查")
+    for language in ["zh-CN", "en"]:
+        if language == "en":
+            page.locator("#language").click()
+        expect(page.locator("html")).to_have_attribute("lang", language)
+        for width in [320, 390, 768, 1024, 1440]:
+            page.set_viewport_size({"width": width, "height": 900})
+            assert page.evaluate(
+                "document.documentElement.scrollWidth <= window.innerWidth"
+            ), (language, width, "page overflow")
+            assert page.locator(".device-actions").evaluate_all(
+                "elements => elements.every(el => el.scrollWidth <= el.clientWidth)"
+            ), (language, width, "action overflow")
+            expect(page.locator(".edit-button").first).to_be_visible()
+
+    # Scan controls and errors still belong to the real discovery workflow.
+    discovery["scanning"] = True
+    page.reload()
+    expect(page.locator("#scan")).to_be_disabled()
+    expect(page.locator("#scan")).to_have_text("Scanning…")
+    discovery.update(scanning=False, error="Test discovery error")
+    page.reload()
+    expect(page.locator("#scan")).to_be_enabled()
+    expect(page.locator("#discovery-message")).to_contain_text("Test discovery error")
+    assert not errors, errors
+    context.close()
 
 
 def main():
@@ -76,7 +171,7 @@ def main():
                     page.locator("#device-url").fill("192.168.254.254")
                     page.locator("#device-notes").fill("Browser test; not a real device")
                     page.locator("#device-save").click()
-                    expect(page.locator(".device-card")).to_have_count(1)
+                    expect(page.locator(".device-row")).to_have_count(1)
                     expect(page.locator(".device-name")).to_have_text("NAS 控制台 <script>")
                     page.locator(".favorite-button").click()
                     expect(page.locator(".favorite-button")).to_have_attribute(
@@ -85,9 +180,9 @@ def main():
                     page.reload()
                     expect(page.locator(".device-name")).to_have_text("NAS 控制台 <script>")
                     page.locator("#search").fill("not-present")
-                    expect(page.locator(".device-card")).to_have_count(0)
+                    expect(page.locator(".device-row")).to_have_count(0)
                     page.locator("#search").fill("")
-                    expect(page.locator(".device-card")).to_have_count(1)
+                    expect(page.locator(".device-row")).to_have_count(1)
                     page.screenshot(path=str(screenshots / "desktop.png"), full_page=True)
                     page.locator("#settings-open").click()
                     page.locator("#theme-toggle").click()
@@ -111,12 +206,14 @@ def main():
                     page.locator(".edit-button").click()
                     page.locator("#device-delete").click()
                     page.locator("#confirm-delete").click()
-                    expect(page.locator(".device-card")).to_have_count(0)
+                    expect(page.locator(".device-row")).to_have_count(0)
                     assert not errors, errors
+                    check_table_layout(browser, base, screenshots)
                     browser.close()
                 print(
                     "Browser smoke test passed: CRUD, escaping, persistence, "
-                    "favorite, search, export, theme, mobile."
+                    "favorite, search, export, theme, table filters, discovery states, "
+                    "long content, responsive layouts in Chinese and English."
                 )
             finally:
                 process.terminate()

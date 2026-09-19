@@ -4,13 +4,13 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const translations = {
   zh: {
-    workspace: "工作空间", allDevices: "所有设备", favorites: "我的收藏", localFirst: "本地运行 · 数据由你掌控",
-    overview: "设备概览", heading: "每一台设备，触手可及。", subtitle: "自动发现局域网中的 NanoKVM，把所有控制台放在一起。",
+    dashboard: "设备面板", favorites: "收藏", settingsShort: "设置", heading: "我的设备",
+    deviceCount: "台设备", onlineCount: "台在线", addressHeading: "地址 / 主机名", status: "状态", response: "响应", actions: "操作", filters: "设备筛选",
     addDevice: "添加设备", totalDevices: "设备总数", savedDevices: "已保存的控制台", online: "在线", offline: "离线",
     unknown: "待检查", unavailable: "待检查 / 离线", webReachable: "管理页面可达", keepRecords: "设备记录会继续保留",
-    discoveryTitle: "局域网自动发现", discoveryHint: "通过 mDNS 发现设备，无需填写 IP。", scan: "扫描设备", scanning: "正在发现设备…",
-    scanProgress: "正在监听 mDNS 并验证设备网页，请稍候。", disabled: "自动发现已关闭", disabledHint: "此部署设置了 MDNS_ENABLED=false，仍可手动添加设备。",
-    all: "全部", emptyTitle: "你的控制台，即将在这里集合", emptyHint: "打开 NanoKVM 的 mDNS，然后扫描设备。也可以手动添加地址。",
+    discoveryTitle: "自动发现已开启", scan: "扫描设备", scanning: "扫描中…",
+    scanProgress: "正在查找并确认设备…", disabled: "自动发现已关闭", disabledHint: "可手动添加设备。",
+    all: "全部", emptyTitle: "还没有设备", emptyHint: "打开 NanoKVM 的 mDNS，然后扫描设备。也可以手动添加地址。",
     manualAdd: "手动添加第一台设备", noResults: "没有符合条件的设备", noResultsHint: "试试其他搜索词，或切换设备筛选。",
     statusNote: "在线状态仅代表 Web 页面可达，不代表受控电脑电源或 HDMI 状态。", openConsole: "打开控制台", name: "设备名称",
     url: "访问地址", urlHelp: "支持局域网 IP 或域名，以及 NanoKVM 的自签名 HTTPS。", notes: "备注", favoriteDevice: "收藏这台设备",
@@ -31,13 +31,13 @@ const translations = {
     interfaces: "监听网卡", allInterfaces: "所有可用网卡", addresses: "已发现地址", scanFailed: "扫描失败", justNow: "刚刚",
   },
   en: {
-    workspace: "WORKSPACE", allDevices: "All devices", favorites: "Favorites", localFirst: "Local first. Yours to keep.",
-    overview: "Overview", heading: "Every device. Within reach.", subtitle: "Discover NanoKVMs on your network. Bring every console together.",
+    dashboard: "Dashboard", favorites: "Favorites", settingsShort: "Settings", heading: "My devices",
+    deviceCount: "devices", onlineCount: "online", addressHeading: "Address / hostname", status: "Status", response: "Response", actions: "Actions", filters: "Device filters",
     addDevice: "Add device", totalDevices: "Total devices", savedDevices: "Saved consoles", online: "Online", offline: "Offline",
     unknown: "Unchecked", unavailable: "Unchecked / offline", webReachable: "Web interface reachable", keepRecords: "Your devices stay saved",
-    discoveryTitle: "Local network discovery", discoveryHint: "Find your devices with mDNS. No IP addresses to remember.", scan: "Discover devices", scanning: "Discovering devices…",
-    scanProgress: "Listening for mDNS services and checking device pages.", disabled: "Auto-discovery is disabled", disabledHint: "MDNS_ENABLED=false is set. You can still add devices manually.",
-    all: "All", emptyTitle: "Your consoles belong here", emptyHint: "Enable mDNS on your NanoKVMs, then discover devices. Or add an address yourself.",
+    discoveryTitle: "Auto-discovery enabled", scan: "Scan devices", scanning: "Scanning…",
+    scanProgress: "Finding and verifying devices…", disabled: "Auto-discovery disabled", disabledHint: "You can add devices manually.",
+    all: "All", emptyTitle: "No devices yet", emptyHint: "Enable mDNS on your NanoKVMs, then scan for devices. Or add an address yourself.",
     manualAdd: "Add your first device", noResults: "No matching devices", noResultsHint: "Try another search or change the device filter.",
     statusNote: "Online means the web interface responds, not that the attached computer or HDMI signal is on.", openConsole: "Open console", name: "Device name",
     url: "Device URL", urlHelp: "LAN IPs, hostnames, and NanoKVM's self-signed HTTPS are supported.", notes: "Notes", favoriteDevice: "Add to favorites",
@@ -67,7 +67,7 @@ function savePreference(key, value) {
 }
 const state = {
   language: preference("nanokvm-language", navigator.language.startsWith("zh") ? "zh" : "en"),
-  theme: preference("nanokvm-theme", "dark"), devices: [], discovery: {}, filter: "all", favorites: false,
+  theme: preference("nanokvm-theme", "dark"), devices: [], discovery: {}, filter: "all",
   search: "", editing: null, deleting: null, toastTimer: null, loading: false, rendered: "",
 };
 if (!(state.language in translations)) state.language = "en";
@@ -100,6 +100,8 @@ function renderPreferences() {
   $("#settings-open").setAttribute("aria-label", t("settings"));
   $("#refresh").title = t("refresh");
   $("#refresh").setAttribute("aria-label", t("refresh"));
+  $(".filters").setAttribute("aria-label", t("filters"));
+  $(".device-table").setAttribute("aria-label", t("heading"));
   state.rendered = "";
   render();
 }
@@ -135,7 +137,7 @@ async function load() {
     const result = await api("/api/devices");
     state.devices = result.devices;
     state.discovery = result.discovery;
-    $("#sidebar-version").textContent = `v${result.version}`;
+    $("#app-version").textContent = `v${result.version}`;
     $("#connection-error").classList.add("hidden");
     render();
   } catch {
@@ -146,12 +148,16 @@ async function load() {
 
 function render() {
   const online = state.devices.filter((device) => device.status === "online").length;
-  $("#stat-total").textContent = state.devices.length;
-  $("#nav-count").textContent = state.devices.length;
-  $("#stat-online").textContent = online;
-  $("#stat-offline").textContent = state.devices.length - online;
+  $("#device-total").textContent = `${state.devices.length} ${t("deviceCount")}`;
+  $("#device-online").textContent = `${online} ${t("onlineCount")}`;
+  $("#count-all").textContent = state.devices.length;
+  $("#count-online").textContent = online;
+  $("#count-offline").textContent = state.devices.filter((device) => device.status === "offline").length;
+  $("#count-favorites").textContent = state.devices.filter((device) => device.favorite).length;
   const discovery = state.discovery;
   $(".discovery-panel").classList.toggle("scanning", !!discovery.scanning);
+  $(".discovery-panel").classList.toggle("disabled", discovery.enabled === false);
+  $(".discovery-panel").classList.toggle("failed", !!discovery.error);
   $("#scan").disabled = !!discovery.scanning || discovery.enabled === false;
   $("#scan span").textContent = t(discovery.scanning ? "scanning" : "scan");
   $("#refresh").classList.toggle("busy", !!discovery.refreshing);
@@ -163,14 +169,18 @@ function render() {
   else if (discovery.last_scan) message = `${t("scanned")} ${timeAgo(discovery.last_scan)} · ${discovery.candidates} ${t("candidateLabel")} · ${discovery.verified} ${t("verifiedLabel")}`;
   $("#discovery-message").textContent = message;
   $("#discovery-settings-info").textContent = `${t("interval")}: ${discovery.interval || 60} ${t("seconds")} · ${t("interfaces")}: ${discovery.interfaces?.join(", ") || t("allInterfaces")}`;
-  $("#nav-all").classList.toggle("active", !state.favorites);
-  $("#nav-favorites").classList.toggle("active", state.favorites);
-  $$(".filter").forEach((button) => button.classList.toggle("active", button.dataset.filter === state.filter));
+  $$(".filter").forEach((button) => {
+    const active = button.dataset.filter === state.filter;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
 
   const visible = state.devices.filter((device) => {
     const haystack = [device.name, device.url, device.hostname, device.notes, ...(device.addresses || [])].join(" ").toLowerCase();
-    return (!state.favorites || device.favorite) && (state.filter === "all" || device.status === state.filter) && haystack.includes(state.search.toLowerCase());
+    const matchesFilter = state.filter === "all" || (state.filter === "favorites" ? device.favorite : device.status === state.filter);
+    return matchesFilter && haystack.includes(state.search.toLowerCase());
   });
+  $(".device-table").classList.toggle("hidden", visible.length === 0);
   $("#empty-state").classList.toggle("hidden", visible.length > 0);
   const filtered = state.devices.length > 0;
   $("#empty-title").textContent = t(filtered ? "noResults" : "emptyTitle");
@@ -184,19 +194,22 @@ function render() {
   for (const device of visible) {
     const card = $("#device-template").content.cloneNode(true);
     translate(card);
-    $(".device-card", card).dataset.id = device.id;
+    $(".device-row", card).dataset.id = device.id;
     $(".device-name", card).textContent = device.name;
     $(".device-name", card).title = device.name;
-    $(".device-hostname", card).textContent = device.hostname || new URL(device.url).hostname;
+    $(".device-hostname", card).textContent = device.hostname || "";
+    $(".device-hostname", card).title = device.hostname || "";
     $(".device-address", card).textContent = device.url;
     $(".device-address", card).title = `${device.url}\n${t("addresses")}: ${(device.addresses || []).join(", ")}`;
-    $(".device-notes", card).textContent = device.notes || t("noNotes");
+    $(".device-notes", card).textContent = device.notes || "—";
+    $(".device-notes", card).title = device.notes || t("noNotes");
     $(".status-label", card).textContent = t(device.status);
     $(".status-badge .dot", card).classList.add(device.status);
-    $(".status-badge", card).title = device.error || t("webReachable");
+    $(".status-badge", card).title = device.error || t(device.status === "online" ? "webReachable" : device.status);
     $(".source-badge", card).textContent = t(device.source === "mdns" ? "discovered" : "manual");
     $(".latency", card).textContent = device.status === "online" && device.latency_ms !== null ? `${device.latency_ms} ms` : "—";
     $(".last-seen", card).textContent = device.last_seen ? `${t("lastSeen")} ${timeAgo(device.last_seen)}` : t("neverSeen");
+    $(".last-seen", card).classList.toggle("hidden", device.status === "online");
     $(".last-seen", card).title = device.last_checked ? new Date(device.last_checked).toLocaleString() : "";
     $(".open-console", card).href = device.url;
     const favorite = $(".favorite-button", card);
@@ -212,7 +225,7 @@ function render() {
     edit.addEventListener("click", () => openDevice(device));
     fragment.append(card);
   }
-  $("#device-grid").replaceChildren(fragment);
+  $("#device-list").replaceChildren(fragment);
 }
 
 async function toggleFavorite(device) {
@@ -303,8 +316,6 @@ $("#restore-discovery").addEventListener("click", async () => {
 });
 $("#search").addEventListener("input", (event) => { state.search = event.target.value; render(); });
 $$(".filter").forEach((button) => button.addEventListener("click", () => { state.filter = button.dataset.filter; render(); }));
-$("#nav-all").addEventListener("click", () => { state.favorites = false; render(); });
-$("#nav-favorites").addEventListener("click", () => { state.favorites = true; render(); });
 $("#language").addEventListener("click", () => {
   state.language = state.language === "zh" ? "en" : "zh";
   savePreference("nanokvm-language", state.language); renderPreferences();
