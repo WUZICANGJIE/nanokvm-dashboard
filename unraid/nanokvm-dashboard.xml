@@ -10,7 +10,7 @@
   <Overview>Local-first NanoKVM dashboard with mDNS discovery, device grouping, favorites, and status checks. Enable mDNS on your NanoKVM devices. Host networking is required for local multicast discovery.</Overview>
   <Category>Tools: Network:Management</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
-  <Icon>https://raw.githubusercontent.com/WUZICANGJIE/nanokvm-dashboard/main/src/nanokvm_dashboard/static/favicon.svg</Icon>
+  <Icon>https://raw.githubusercontent.com/WUZICANGJIE/nanokvm-dashboard/main/unraid/icon.png</Icon>
   <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/nanokvm-dashboard" Mode="rw" Description="Persistent SQLite device database." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nanokvm-dashboard</Config>
   <Config Name="HTTP port" Target="PORT" Default="8080" Mode="" Description="Host mode binds directly to this port. Update WebUI if changed." Type="Variable" Display="always" Required="true" Mask="false">8080</Config>
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Run as Unraid nobody by default." Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
