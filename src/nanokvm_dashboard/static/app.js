@@ -40,7 +40,10 @@ const translations = {
     credentialsSavedToast: "凭据已保存，控制功能已启用", credentialsCleared: "已清除凭据",
     clearCredentialsPrompt: "清除后，面板不再读取这台设备的电源灯状态，也不能再发送电源、重启或文本命令。",
     powerTitle: "电源与重启", powerButton: "电源键", powerLong: "长按电源键", resetButton: "重启键",
-    powerHint: "向受控电脑发送 ATX 按键脉冲：短按相当于按一次机箱电源键，长按通常触发强制关机。每次操作都会先确认。",
+    powerButtonHint: "短按：等同于按一次机箱电源键。系统启用 ACPI 电源键关机时会正常关机，否则可能直接断电。",
+    powerLongHint: "按住约 5 秒：强制断电。系统不会收到任何通知，未保存的数据会丢失。",
+    resetButtonHint: "直接拉主板 Reset 线：等同于按机箱上的重启键。操作系统不会收到关机信号，未保存的数据会丢失。",
+    powerHint: "每次操作都会先确认。短按电源键＝按一次机箱电源键；长按约 5 秒＝强制断电；重启键＝直接拉主板 Reset，系统不会收到通知，未保存的数据会丢失。",
     pasteTitle: "发送文本", pasteSend: "发送文本", pastePlaceholder: "要输入到受控电脑的文本",
     pasteHint: "以 USB 键盘输入目标电脑，最多 1024 个字符；发送前请确认光标在正确的输入位置。无法输入中日韩字符。",
     pasteSent: "文本已发送", pasteEmpty: "请输入要发送的文本",
@@ -91,7 +94,10 @@ const translations = {
     credentialsSavedToast: "Credentials saved; control enabled", credentialsCleared: "Credentials cleared",
     clearCredentialsPrompt: "After clearing, the dashboard stops reading this device's power LED and can no longer send power, reset, or text commands.",
     powerTitle: "Power and reset", powerButton: "Power button", powerLong: "Hold power", resetButton: "Reset button",
-    powerHint: "Sends an ATX button pulse to the attached computer: a short press is the case power button, a long press usually forces a power-off. Every action asks first.",
+    powerButtonHint: "Short press: same as tapping the case power button. The machine shuts down cleanly if its OS handles the ACPI power button, otherwise power may cut immediately.",
+    powerLongHint: "Holding ~5 s: forced power cut. The OS is not notified and unsaved data is lost.",
+    resetButtonHint: "Pulls the mainboard reset line: same as the case reset button. The OS is not notified and unsaved data is lost.",
+    powerHint: "Every action asks first. Short press = a tap on the case power button; hold ~5 s = forced power cut; reset = a direct mainboard reset, so the OS is never told and unsaved data is lost.",
     pasteTitle: "Send text", pasteSend: "Send text", pastePlaceholder: "Text to type on the attached computer",
     pasteHint: "Types the text as USB keyboard input, up to 1024 characters. Check that the cursor is in the right place first; CJK characters cannot be typed.",
     pasteSent: "Text sent", pasteEmpty: "Enter the text to send",
@@ -133,6 +139,7 @@ function timeAgo(value) {
 
 function translate(root = document) {
   $$('[data-i18n]', root).forEach((element) => { element.textContent = t(element.dataset.i18n); });
+  $$('[data-i18n-title]', root).forEach((element) => { element.title = t(element.dataset.i18nTitle); });
 }
 
 function renderPreferences() {
