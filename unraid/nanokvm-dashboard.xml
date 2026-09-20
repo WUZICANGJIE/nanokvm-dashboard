@@ -7,7 +7,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/WUZICANGJIE/nanokvm-dashboard/issues</Support>
   <Project>https://github.com/WUZICANGJIE/nanokvm-dashboard</Project>
-  <Overview>Local-first NanoKVM dashboard with mDNS discovery, device grouping, favorites, and status checks. Enable mDNS on your NanoKVM devices. Host networking is required for local multicast discovery.</Overview>
+  <Overview>Local-first NanoKVM dashboard with mDNS discovery, device grouping, favorites, and status checks. Optionally stores one NanoKVM login per device to show its power LED and version and to send power, reset, and keyboard-text commands. Enable mDNS on your NanoKVM devices. Host networking is required for local multicast discovery.</Overview>
   <Category>Tools: Network:Management</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
   <Icon>https://raw.githubusercontent.com/WUZICANGJIE/nanokvm-dashboard/main/unraid/icon.png</Icon>
@@ -16,6 +16,7 @@
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Run as Unraid nobody by default." Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Run as Unraid users group by default." Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
   <Config Name="mDNS interfaces" Target="MDNS_INTERFACES" Default="" Mode="" Description="Optional comma-separated Unraid LAN IPv4 addresses, for example 192.168.1.10. Leave empty for all interfaces." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Allow device control" Target="ALLOW_CONTROL" Default="true" Mode="" Description="Allow power, reset, and text commands once a NanoKVM login is saved for a device. Set to false to keep the dashboard read-only." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
   <Config Name="Dashboard username" Target="DASHBOARD_USERNAME" Default="" Mode="" Description="Optional Basic Auth; set both username and password." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="Dashboard password" Target="DASHBOARD_PASSWORD" Default="" Mode="" Description="Optional Basic Auth; this is not your NanoKVM password." Type="Variable" Display="advanced" Required="false" Mask="true"/>
 </Container>

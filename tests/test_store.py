@@ -93,6 +93,63 @@ def test_mac_metadata_updates_and_survives_edit_import_and_restart(tmp_path):
     reopened.close()
 
 
+def test_control_credentials_are_hidden_from_reads_and_the_export(tmp_path):
+    store = Store(tmp_path)
+    device = store.add(DeviceInput(name="Desk", url="192.168.1.10"))
+    assert device["control"] is False
+    save = store.set_credentials(device["id"], "admin", "fernet-token")
+    assert save is None
+    saved = store.get(device["id"])
+    assert saved["control"] is True
+    assert saved["kvm_username"] == "admin"
+    assert "kvm_password" not in saved
+    assert store.credentials(device["id"]) == ("admin", "fernet-token")
+    assert "kvm_password" not in store.export()["devices"][0]
+    store.record_control(device["id"], "on", "2.4.3")
+    assert store.get(device["id"])["power_state"] == "on"
+    store.close()
+    reopened = Store(tmp_path)
+    assert reopened.get(device["id"])["control"] is True
+    # A restart withdraws the power reading instead of claiming a stale state.
+    assert reopened.get(device["id"])["power_state"] == ""
+    assert reopened.get(device["id"])["app_version"] == "2.4.3"
+    reopened.clear_credentials(device["id"])
+    cleared = reopened.get(device["id"])
+    assert cleared["control"] is False
+    assert reopened.credentials(device["id"]) is None
+    reopened.close()
+
+
+def test_existing_database_from_021_gains_control_columns(tmp_path):
+    # Schema from 0.2.1, before the control columns existed.
+    with sqlite3.connect(tmp_path / "dashboard.db") as connection:
+        connection.executescript("""
+            CREATE TABLE devices (
+                id TEXT PRIMARY KEY, identity TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL, custom_name INTEGER NOT NULL DEFAULT 0,
+                url TEXT NOT NULL, custom_url INTEGER NOT NULL DEFAULT 0,
+                hostname TEXT NOT NULL DEFAULT '', addresses TEXT NOT NULL DEFAULT '[]',
+                source TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '',
+                favorite INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL,
+                last_seen TEXT, last_checked TEXT, status TEXT NOT NULL DEFAULT 'unknown',
+                latency_ms INTEGER, error TEXT NOT NULL DEFAULT '',
+                mac_addresses TEXT NOT NULL DEFAULT '[]'
+            );
+            CREATE TABLE ignored (identity TEXT PRIMARY KEY);
+            INSERT INTO devices
+                (id,identity,name,url,source,notes,favorite,created_at,mac_addresses)
+                VALUES ('old','mdns:desk.local','Desk','http://192.168.1.10',
+                        'mdns','Keep notes',1,'2026-01-01','["02:ab:cd:12:34:56"]');
+        """)
+    store = Store(tmp_path)
+    old = store.get("old")
+    assert old["name"] == "Desk" and old["notes"] == "Keep notes"
+    assert old["mac_addresses"] == ["02:ab:cd:12:34:56"]
+    assert old["control"] is False
+    assert old["power_state"] == "" and old["app_version"] == "" and old["control_error"] == ""
+    store.close()
+
+
 def test_existing_database_is_migrated_without_losing_devices_or_ignored_hosts(tmp_path):
     # Schema from 0.1.0, before MAC metadata existed.
     with sqlite3.connect(tmp_path / "dashboard.db") as connection:

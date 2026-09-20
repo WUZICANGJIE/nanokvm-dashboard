@@ -1,4 +1,5 @@
 import ipaddress
+from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -81,6 +82,25 @@ class DeviceInput(BaseModel):
     @classmethod
     def clean_url(cls, value):
         return normalize_url(value)
+
+
+class ControlCredentials(BaseModel):
+    """NanoKVM login used by the dashboard to control this device."""
+
+    model_config = ConfigDict(extra="forbid")
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class PowerAction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["power", "reset"]
+    duration: int | None = Field(default=None, ge=100, le=10000)
+
+
+class PasteText(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=1024)
 
 
 class ImportData(BaseModel):

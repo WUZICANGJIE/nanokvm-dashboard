@@ -29,21 +29,33 @@ class Store:
                 source TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '',
                 favorite INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL,
                 last_seen TEXT, last_checked TEXT, status TEXT NOT NULL DEFAULT 'unknown',
-                latency_ms INTEGER, error TEXT NOT NULL DEFAULT ''
+                latency_ms INTEGER, error TEXT NOT NULL DEFAULT '',
+                mac_addresses TEXT NOT NULL DEFAULT '[]',
+                kvm_username TEXT NOT NULL DEFAULT '', kvm_password TEXT NOT NULL DEFAULT '',
+                power_state TEXT NOT NULL DEFAULT '', app_version TEXT NOT NULL DEFAULT '',
+                control_error TEXT NOT NULL DEFAULT '', control_checked TEXT
             );
             CREATE TABLE IF NOT EXISTS ignored (identity TEXT PRIMARY KEY);
         """)
-        # Existing installations predate MAC metadata. Upgrade in place without losing devices.
+        # Later releases added columns. Upgrade in place without losing devices.
         columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(devices)")}
-        if "mac_addresses" not in columns:
-            with self.connection:
-                self.connection.execute(
-                    "ALTER TABLE devices ADD COLUMN mac_addresses TEXT NOT NULL DEFAULT '[]'"
-                )
-        # A stored successful check is not evidence that a device is online after a restart.
+        for name, definition in {
+            "mac_addresses": "TEXT NOT NULL DEFAULT '[]'",
+            "kvm_username": "TEXT NOT NULL DEFAULT ''",
+            "kvm_password": "TEXT NOT NULL DEFAULT ''",
+            "power_state": "TEXT NOT NULL DEFAULT ''",
+            "app_version": "TEXT NOT NULL DEFAULT ''",
+            "control_error": "TEXT NOT NULL DEFAULT ''",
+            "control_checked": "TEXT",
+        }.items():
+            if name not in columns:
+                with self.connection:
+                    self.connection.execute(f"ALTER TABLE devices ADD COLUMN {name} {definition}")
+        # A stored successful check is not evidence that a device is online after a restart,
+        # and a power-led reading is only ever as fresh as the last poll.
         with self.connection:
             self.connection.execute(
-                "UPDATE devices SET status='unknown', latency_ms=NULL, error=''"
+                "UPDATE devices SET status='unknown', latency_ms=NULL, error='', power_state=''"
             )
 
     def close(self):
@@ -58,6 +70,10 @@ class Store:
         result["mac_addresses"] = json.loads(result["mac_addresses"])
         for key in ("favorite", "custom_name", "custom_url"):
             result[key] = bool(result[key])
+        # The stored password never leaves the process: the API and the browser only see
+        # whether control is configured.
+        result.pop("kvm_password", None)
+        result["control"] = bool(result.get("kvm_username"))
         return result
 
     def list(self):
@@ -175,6 +191,39 @@ class Store:
                 url=CASE WHEN custom_url=0 AND ? IS NOT NULL THEN ? ELSE url END WHERE id=?""",
                 ("online" if online else "offline", latency_ms, error, checked, online, checked,
                  working_url, working_url, device_id),
+            )
+
+    def set_credentials(self, device_id, username, encrypted_password):
+        with self.connection:
+            self.connection.execute(
+                "UPDATE devices SET kvm_username=?, kvm_password=?, control_error=''"
+                " WHERE id=?",
+                (username, encrypted_password, device_id),
+            )
+
+    def clear_credentials(self, device_id):
+        with self.connection:
+            self.connection.execute(
+                """UPDATE devices SET kvm_username='', kvm_password='', power_state='',
+                app_version='', control_error='' WHERE id=?""",
+                (device_id,),
+            )
+
+    def credentials(self, device_id):
+        """(username, encrypted password) for internal use; never returned by the API."""
+        row = self.connection.execute(
+            "SELECT kvm_username, kvm_password FROM devices WHERE id=?", (device_id,)
+        ).fetchone()
+        if row is None or not row["kvm_username"]:
+            return None
+        return row["kvm_username"], row["kvm_password"]
+
+    def record_control(self, device_id, power_state, app_version, error=""):
+        with self.connection:
+            self.connection.execute(
+                """UPDATE devices SET power_state=?, app_version=?, control_error=?,
+                control_checked=? WHERE id=?""",
+                (power_state, app_version, error[:200], now(), device_id),
             )
 
     def export(self):

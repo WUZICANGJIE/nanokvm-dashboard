@@ -31,6 +31,28 @@ const translations = {
     removePrompt: "确定移除这台设备吗？自动发现的设备会被暂时忽略，可在设置中恢复。", neverScanned: "等待首次扫描。",
     scanned: "上次扫描", candidateLabel: "个服务主机", verifiedLabel: "台 NanoKVM", interval: "自动扫描间隔", seconds: "秒",
     interfaces: "监听网卡", allInterfaces: "所有可用网卡", addresses: "已发现地址", scanFailed: "扫描失败", justNow: "刚刚",
+    controlTitle: "设备控制", username: "用户名", password: "密码",
+    hostLabel: "主机", powerOn: "已开机", powerOff: "已关机", powerUnknown: "未知",
+    controlCredentials: "NanoKVM 登录", credentialsSaved: "已保存 {username} 的凭据，可以控制这台设备。",
+    credentialsMissing: "尚未保存凭据。保存后即可读取电源灯状态，并发送电源、重启和文本命令。",
+    saveCredentials: "保存凭据", saveCredentialsBusy: "验证中…", clearCredentials: "清除凭据",
+    passwordHelp: "密码加密保存在数据目录，只用于面板自行登录设备；不会回传到浏览器。",
+    credentialsSavedToast: "凭据已保存，控制功能已启用", credentialsCleared: "已清除凭据",
+    clearCredentialsPrompt: "清除后，面板不再读取这台设备的电源灯状态，也不能再发送电源、重启或文本命令。",
+    powerTitle: "电源与重启", powerButton: "电源键", powerLong: "长按电源键", resetButton: "重启键",
+    powerHint: "向受控电脑发送 ATX 按键脉冲：短按相当于按一次机箱电源键，长按通常触发强制关机。每次操作都会先确认。",
+    pasteTitle: "发送文本", pasteSend: "发送文本", pastePlaceholder: "要输入到受控电脑的文本",
+    pasteHint: "以 USB 键盘输入目标电脑，最多 1024 个字符；发送前请确认光标在正确的输入位置。无法输入中日韩字符。",
+    pasteSent: "文本已发送", pasteEmpty: "请输入要发送的文本",
+    controlFootnote: "电源与键鼠命令直接发送到这台 KVM，会立即影响它连接的那台电脑。",
+    controlWarningTitle: "控制功能已启用，但面板没有登录保护",
+    controlWarningText: "任何能访问这个面板的人都能开关受控电脑或向它输入文本。建议设置 DASHBOARD_USERNAME 和 DASHBOARD_PASSWORD，或只在可信网络内使用。",
+    powerSent: "已发送电源键脉冲", resetSent: "已发送重启键脉冲",
+    confirmPowerTitle: "发送电源键脉冲", confirmPowerLongTitle: "长按电源键", confirmResetTitle: "发送重启键脉冲",
+    confirmPower: "{name}：相当于按一次机箱电源键，受控电脑会开机或关机。",
+    confirmPowerLong: "{name}：按住电源键约 5 秒，通常会强制关机，可能丢失未保存的数据。",
+    confirmReset: "{name}：等于按一次重启键，电脑会立即重启，未保存的数据可能丢失。",
+    confirmSend: "发送", controlDisabled: "本次部署已关闭控制功能（ALLOW_CONTROL=false）。",
   },
   en: {
     dashboard: "Dashboard", favorites: "Favorites", settingsShort: "Settings", heading: "My devices",
@@ -60,6 +82,28 @@ const translations = {
     removePrompt: "Remove this device? Discovered devices will be ignored until you restore them in Settings.", neverScanned: "Waiting for the first scan.",
     scanned: "Last scan", candidateLabel: "service hosts", verifiedLabel: "NanoKVMs", interval: "Discovery interval", seconds: "seconds",
     interfaces: "Interfaces", allInterfaces: "All available interfaces", addresses: "Discovered addresses", scanFailed: "Discovery failed", justNow: "just now",
+    controlTitle: "Device control", username: "Username", password: "Password",
+    hostLabel: "Host", powerOn: "Powered on", powerOff: "Powered off", powerUnknown: "Unknown",
+    controlCredentials: "NanoKVM login", credentialsSaved: "Credentials saved for {username}; this device can be controlled.",
+    credentialsMissing: "No credentials saved yet. Save them to read the power LED and send power, reset, and text commands.",
+    saveCredentials: "Save credentials", saveCredentialsBusy: "Checking…", clearCredentials: "Clear credentials",
+    passwordHelp: "The password is stored encrypted in the data directory and used only by the dashboard to log in. It is never sent back to the browser.",
+    credentialsSavedToast: "Credentials saved; control enabled", credentialsCleared: "Credentials cleared",
+    clearCredentialsPrompt: "After clearing, the dashboard stops reading this device's power LED and can no longer send power, reset, or text commands.",
+    powerTitle: "Power and reset", powerButton: "Power button", powerLong: "Hold power", resetButton: "Reset button",
+    powerHint: "Sends an ATX button pulse to the attached computer: a short press is the case power button, a long press usually forces a power-off. Every action asks first.",
+    pasteTitle: "Send text", pasteSend: "Send text", pastePlaceholder: "Text to type on the attached computer",
+    pasteHint: "Types the text as USB keyboard input, up to 1024 characters. Check that the cursor is in the right place first; CJK characters cannot be typed.",
+    pasteSent: "Text sent", pasteEmpty: "Enter the text to send",
+    controlFootnote: "Power and keyboard commands go straight to this KVM and act on the computer it is wired to.",
+    controlWarningTitle: "Control is enabled but this dashboard has no login",
+    controlWarningText: "Anyone who can reach this dashboard can power the attached computers on or off or type into them. Set DASHBOARD_USERNAME and DASHBOARD_PASSWORD, or keep it on a trusted network.",
+    powerSent: "Power pulse sent", resetSent: "Reset pulse sent",
+    confirmPowerTitle: "Send a power pulse", confirmPowerLongTitle: "Hold the power button", confirmResetTitle: "Send a reset pulse",
+    confirmPower: "{name}: like pressing the case power button once. The computer turns on or off.",
+    confirmPowerLong: "{name}: holds the power button for about 5 seconds, which usually forces a power-off and can lose unsaved work.",
+    confirmReset: "{name}: like pressing the reset button. The computer restarts immediately and unsaved work can be lost.",
+    confirmSend: "Send", controlDisabled: "Control is disabled in this deployment (ALLOW_CONTROL=false).",
   },
 };
 
@@ -72,7 +116,8 @@ function savePreference(key, value) {
 const state = {
   language: preference("nanokvm-language", navigator.language.startsWith("zh") ? "zh" : "en"),
   theme: preference("nanokvm-theme", "dark"), devices: [], discovery: {}, filter: "all",
-  search: "", editing: null, deleting: null, toastTimer: null, loading: false, rendered: "",
+  search: "", editing: null, toastTimer: null, loading: false, rendered: "",
+  controlAvailable: false, dashboardAuth: true, controlling: null, confirmAction: null,
 };
 if (!(state.language in translations)) state.language = "en";
 if (!["dark", "light"].includes(state.theme)) state.theme = "dark";
@@ -106,6 +151,8 @@ function renderPreferences() {
   $("#refresh").setAttribute("aria-label", t("refresh"));
   $(".filters").setAttribute("aria-label", t("filters"));
   $(".device-table").setAttribute("aria-label", t("heading"));
+  $("#control-paste").placeholder = t("pastePlaceholder");
+  if (state.controlling && $("#control-dialog").open) renderControlDevice(state.controlling);
   state.rendered = "";
   render();
 }
@@ -141,6 +188,13 @@ async function load() {
     const result = await api("/api/devices");
     state.devices = result.devices;
     state.discovery = result.discovery;
+    state.controlAvailable = result.control_available !== false;
+    state.dashboardAuth = result.dashboard_auth !== false;
+    if (state.controlling) {
+      // Keep an open control dialog in step with the periodic status refresh.
+      state.controlling = state.devices.find((item) => item.id === state.controlling.id) || null;
+      if (state.controlling && $("#control-dialog").open) renderControlDevice(state.controlling);
+    }
     $("#app-version").textContent = `v${result.version}`;
     $("#connection-error").classList.add("hidden");
     render();
@@ -190,6 +244,11 @@ function render() {
   $("#empty-title").textContent = t(filtered ? "noResults" : "emptyTitle");
   $("#empty-message").textContent = t(filtered ? "noResultsHint" : "emptyHint");
   $("#empty-add").classList.toggle("hidden", filtered);
+  // Controlling machines from a dashboard anyone on the network can open deserves a warning.
+  $("#control-warning").classList.toggle(
+    "hidden",
+    !(state.controlAvailable && !state.dashboardAuth && state.devices.some((device) => device.control)),
+  );
 
   const signature = JSON.stringify([visible, state.language]);
   if (signature === state.rendered) return;
@@ -209,11 +268,19 @@ function render() {
     const macs = device.mac_addresses || [];
     $(".device-macs", card).textContent = macs.length ? macs.join("\n") : "—";
     $(".device-macs", card).title = t(macs.length ? "macHint" : "macMissingHint");
+    // The device's own app version, only known once credentials are stored.
+    $(".device-version", card).textContent = device.app_version ? `app ${device.app_version}` : "";
     $(".device-notes", card).textContent = device.notes || "—";
     $(".device-notes", card).title = device.notes || t("noNotes");
     $(".status-label", card).textContent = t(device.status);
     $(".status-badge .dot", card).classList.add(device.status);
     $(".status-badge", card).title = device.error || t(device.status === "online" ? "webReachable" : device.status);
+    // The power LED says whether the attached computer is on, which the web probe cannot know.
+    const power = $(".device-power", card);
+    power.classList.toggle("hidden", !device.control);
+    power.textContent = device.control ? `${t("hostLabel")} ${t(powerKey(device.power_state))}` : "";
+    power.classList.toggle("power-on", device.power_state === "on");
+    power.title = device.control_error || "";
     $(".source-badge", card).textContent = t(device.source === "mdns" ? "discovered" : "manual");
     $(".latency", card).textContent = device.status === "online" && device.latency_ms !== null ? `${device.latency_ms} ms` : "—";
     $(".last-seen", card).textContent = device.last_seen ? `${t("lastSeen")} ${timeAgo(device.last_seen)}` : t("neverSeen");
@@ -231,6 +298,12 @@ function render() {
     const edit = $(".edit-button", card);
     edit.title = t("editDevice"); edit.setAttribute("aria-label", `${t("editDevice")}: ${device.name}`);
     edit.addEventListener("click", () => openDevice(device));
+    const control = $(".control-button", card);
+    control.title = state.controlAvailable ? t("controlTitle") : t("controlDisabled");
+    control.setAttribute("aria-label", `${t("controlTitle")}: ${device.name}`);
+    control.classList.toggle("selected", !!device.control);
+    control.disabled = !state.controlAvailable;
+    control.addEventListener("click", () => openControl(device));
     fragment.append(card);
   }
   $("#device-list").replaceChildren(fragment);
@@ -274,6 +347,54 @@ function openDevice(device = null) {
   $("#device-name").focus();
 }
 
+function powerKey(value) {
+  return value === "on" ? "powerOn" : value === "off" ? "powerOff" : "powerUnknown";
+}
+
+function askConfirm(title, message, accept, action) {
+  state.confirmAction = action;
+  $("#confirm-title").textContent = title;
+  $("#confirm-message").textContent = message;
+  $("#confirm-accept").textContent = accept;
+  $("#confirm-dialog").showModal();
+}
+
+function renderControlDevice(device) {
+  if (!device) return;
+  const power = device.power_state || "";
+  $("#control-power").textContent = t(powerKey(power));
+  $("#control-dialog .status-badge .dot").className = power === "on" ? "dot online" : "dot";
+  const detail = [
+    device.app_version ? `app ${device.app_version}` : "", device.control_error || "",
+  ].filter(Boolean).join(" · ");
+  $("#control-detail").textContent = detail;
+  $("#control-detail").classList.toggle("hidden", !detail);
+  $("#control-credentials-info").textContent = device.control
+    ? t("credentialsSaved").replace("{username}", device.kvm_username || "")
+    : t("credentialsMissing");
+  $("#control-clear").classList.toggle("hidden", !device.control);
+  // Power, reset and paste stay unavailable until this device has stored credentials.
+  ["#power-press", "#power-long", "#reset-press", "#paste-send"].forEach((selector) => {
+    $(selector).disabled = !device.control;
+  });
+}
+
+function openControl(device) {
+  state.controlling = device;
+  $("#control-device").textContent = `${device.name} · ${device.url}`;
+  $("#control-username").value = device.kvm_username || "";
+  $("#control-password").value = "";
+  $("#control-paste").value = "";
+  $("#control-error").classList.add("hidden");
+  renderControlDevice(device);
+  $("#control-dialog").showModal();
+}
+
+function controlError(message) {
+  $("#control-error").textContent = message;
+  $("#control-error").classList.remove("hidden");
+}
+
 $("#device-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = $("#device-save");
@@ -291,16 +412,108 @@ $("#device-form").addEventListener("submit", async (event) => {
 });
 
 $("#device-delete").addEventListener("click", () => {
-  state.deleting = state.editing;
-  $("#confirm-message").textContent = `${state.deleting.name} — ${t("removePrompt")}`;
-  $("#device-dialog").close(); $("#confirm-dialog").showModal();
+  const device = state.editing;
+  $("#device-dialog").close();
+  askConfirm(
+    t("removeDevice"), `${device.name} — ${t("removePrompt")}`, t("confirmRemove"),
+    async () => {
+      await api(`/api/devices/${encodeURIComponent(device.id)}`, { method: "DELETE" });
+      toast(t("removed")); await load();
+    },
+  );
 });
-$("#confirm-delete").addEventListener("click", async () => {
-  if (!state.deleting) return;
-  const button = $("#confirm-delete"); button.disabled = true;
+$("#confirm-accept").addEventListener("click", async () => {
+  const action = state.confirmAction;
+  if (!action) return;
+  const button = $("#confirm-accept"); button.disabled = true;
   try {
-    await api(`/api/devices/${encodeURIComponent(state.deleting.id)}`, { method: "DELETE" });
-    $("#confirm-dialog").close(); state.deleting = null; toast(t("removed")); await load();
+    await action();
+    state.confirmAction = null; $("#confirm-dialog").close();
+  } catch (error) { toast(error.message); }
+  finally { button.disabled = false; }
+});
+
+$("#control-save").addEventListener("click", async () => {
+  const device = state.controlling;
+  if (!device) return;
+  const username = $("#control-username").value.trim();
+  const password = $("#control-password").value;
+  const button = $("#control-save");
+  if (!username || !password) { controlError(t("credentialsMissing")); return; }
+  button.disabled = true; button.textContent = t("saveCredentialsBusy");
+  try {
+    state.controlling = await api(`/api/devices/${encodeURIComponent(device.id)}/control`, {
+      method: "POST", body: JSON.stringify({ username, password }),
+    });
+    $("#control-password").value = "";
+    $("#control-error").classList.add("hidden");
+    toast(t("credentialsSavedToast"));
+    renderControlDevice(state.controlling);
+    await load();
+  } catch (error) { controlError(error.message); }
+  finally { button.disabled = false; button.textContent = t("saveCredentials"); }
+});
+$("#control-clear").addEventListener("click", () => {
+  const device = state.controlling;
+  if (!device) return;
+  askConfirm(
+    t("clearCredentials"), `${device.name} — ${t("clearCredentialsPrompt")}`, t("clearCredentials"),
+    async () => {
+      await api(`/api/devices/${encodeURIComponent(device.id)}/control`, { method: "DELETE" });
+      state.controlling = { ...device, control: false, kvm_username: "" };
+      $("#control-username").value = "";
+      renderControlDevice(state.controlling);
+      toast(t("credentialsCleared")); await load();
+    },
+  );
+});
+
+function sendPower(device, action, duration, title, message, done) {
+  askConfirm(title, message, t("confirmSend"), async () => {
+    await api(`/api/devices/${encodeURIComponent(device.id)}/power`, {
+      method: "POST", body: JSON.stringify({ action, duration }),
+    });
+    toast(done);
+    await load();
+    renderControlDevice(state.controlling);
+  });
+}
+$("#power-press").addEventListener("click", () => {
+  const device = state.controlling;
+  if (!device) return;
+  sendPower(
+    device, "power", null, t("confirmPowerTitle"),
+    t("confirmPower").replace("{name}", device.name), t("powerSent"),
+  );
+});
+$("#power-long").addEventListener("click", () => {
+  const device = state.controlling;
+  if (!device) return;
+  sendPower(
+    device, "power", 5000, t("confirmPowerLongTitle"),
+    t("confirmPowerLong").replace("{name}", device.name), t("powerSent"),
+  );
+});
+$("#reset-press").addEventListener("click", () => {
+  const device = state.controlling;
+  if (!device) return;
+  sendPower(
+    device, "reset", null, t("confirmResetTitle"),
+    t("confirmReset").replace("{name}", device.name), t("resetSent"),
+  );
+});
+$("#paste-send").addEventListener("click", async () => {
+  const device = state.controlling;
+  const text = $("#control-paste").value;
+  if (!device) return;
+  if (!text) { toast(t("pasteEmpty")); return; }
+  const button = $("#paste-send"); button.disabled = true;
+  try {
+    await api(`/api/devices/${encodeURIComponent(device.id)}/paste`, {
+      method: "POST", body: JSON.stringify({ text }),
+    });
+    $("#control-paste").value = "";
+    toast(t("pasteSent"));
   } catch (error) { toast(error.message); }
   finally { button.disabled = false; }
 });

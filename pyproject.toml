@@ -1,11 +1,12 @@
 [project]
 name = "nanokvm-dashboard"
-version = "0.2.1"
+version = "0.3.0"
 description = "A small, self-hosted NanoKVM dashboard with mDNS discovery."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 dependencies = [
+    "cryptography>=44,<47",
     "fastapi>=0.115,<1",
     "httpx>=0.28,<1",
     "uvicorn>=0.34,<1",

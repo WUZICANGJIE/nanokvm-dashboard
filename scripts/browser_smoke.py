@@ -47,6 +47,8 @@ def check_table_layout(browser, base, screenshots):
             "status": status, "latency_ms": 12 if status == "online" else None,
             "last_seen": (now - timedelta(hours=2)).isoformat() if status == "offline" else None,
             "last_checked": now.isoformat(), "error": "" if status != "offline" else "Timeout",
+            "control": False, "kvm_username": "", "power_state": "", "app_version": "",
+            "control_error": "",
         }
         for index, (name, note, status) in enumerate([
             ("工作站", "主力电脑", "online"),
@@ -61,7 +63,26 @@ def check_table_layout(browser, base, screenshots):
     }
     page.route("**/api/devices", lambda route: route.fulfill(json={
         "devices": devices, "discovery": discovery, "version": __version__,
+        "control_available": True, "dashboard_auth": False,
     }))
+
+    def save_credentials(route):
+        # The dashboard stores the credentials; the device list then reports control enabled.
+        devices[0].update(control=True, kvm_username="admin", power_state="on", app_version="2.4.3")
+        route.fulfill(json=dict(devices[0]))
+
+    def clear_credentials(route):
+        devices[0].update(control=False, kvm_username="", power_state="", app_version="")
+        route.fulfill(json=dict(devices[0]))
+
+    def accept_command(route):
+        route.fulfill(json={"ok": True})
+
+    page.route("**/api/devices/*/control", lambda route: (
+        clear_credentials(route) if route.request.method == "DELETE" else save_credentials(route)
+    ))
+    page.route("**/api/devices/*/power", accept_command)
+    page.route("**/api/devices/*/paste", accept_command)
     page.goto(base)
     expect(page.locator(".device-row")).to_have_count(3)
     expect(page.locator("#count-online")).to_have_text("2")
@@ -97,6 +118,46 @@ def check_table_layout(browser, base, screenshots):
     page.locator("#settings-dialog .dialog-close").click()
     page.set_viewport_size({"width": 390, "height": 844})
     page.screenshot(path=str(screenshots / "table-mobile.png"), full_page=True)
+
+    # Control: shut until credentials are saved, then power, reset and paste reach the device.
+    expect(page.locator(".device-power").first).to_be_hidden()
+    page.locator(".control-button").first.click()
+    expect(page.locator("#control-dialog")).to_be_visible()
+    expect(page.locator("#control-device")).to_contain_text("工作站")
+    expect(page.locator("#control-credentials-info")).to_contain_text("尚未保存凭据")
+    expect(page.locator("#power-press")).to_be_disabled()
+    expect(page.locator("#paste-send")).to_be_disabled()
+    page.screenshot(path=str(screenshots / "control-empty.png"), full_page=True)
+    page.locator("#control-username").fill("admin")
+    page.locator("#control-password").fill("secret")
+    page.locator("#control-save").click()
+    expect(page.locator("#toast")).to_contain_text("凭据已保存")
+    expect(page.locator("#control-power")).to_have_text("已开机")
+    expect(page.locator("#control-detail")).to_contain_text("app 2.4.3")
+    expect(page.locator("#power-press")).to_be_enabled()
+    expect(page.locator("#paste-send")).to_be_enabled()
+    page.locator("#power-press").click()
+    expect(page.locator("#confirm-title")).to_have_text("发送电源键脉冲")
+    page.locator("#confirm-accept").click()
+    expect(page.locator("#toast")).to_contain_text("已发送电源键脉冲")
+    page.locator("#control-paste").fill("uname -a")
+    page.locator("#paste-send").click()
+    expect(page.locator("#toast")).to_contain_text("文本已发送")
+    page.screenshot(path=str(screenshots / "control-enabled.png"), full_page=True)
+    page.locator("#control-dialog .dialog-close").click()
+    expect(page.locator(".device-power").first).to_have_text("主机 已开机")
+    expect(page.locator(".device-version").first).to_have_text("app 2.4.3")
+    # Control is configured and this deployment has no dashboard login: say so.
+    page.locator("#settings-open").click()
+    expect(page.locator("#control-warning")).to_be_visible()
+    page.locator("#settings-dialog .dialog-close").click()
+    page.locator(".control-button").first.click()
+    page.locator("#control-clear").click()
+    page.locator("#confirm-accept").click()
+    expect(page.locator("#toast")).to_contain_text("已清除凭据")
+    expect(page.locator("#power-press")).to_be_disabled()
+    page.locator("#control-dialog .dialog-close").click()
+    expect(page.locator(".device-power").first).to_be_hidden()
 
     # Long user content must not push controls off screen, in either language.
     devices[0].update(name="Long-device-name-" * 6, notes="Long note " * 100,
@@ -219,7 +280,7 @@ def main():
                     expect(page.locator(".device-name")).to_have_text("Renamed console")
                     page.locator(".edit-button").click()
                     page.locator("#device-delete").click()
-                    page.locator("#confirm-delete").click()
+                    page.locator("#confirm-accept").click()
                     expect(page.locator(".device-row")).to_have_count(0)
                     assert not errors, errors
                     check_table_layout(browser, base, screenshots)

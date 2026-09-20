@@ -10,6 +10,7 @@ services:
       PGID: "100"
       TZ: Asia/Tokyo
       # MDNS_INTERFACES: "192.168.1.10"  # This host's LAN IPv4, not a KVM address.
+      ALLOW_CONTROL: "true"              # Device control stays unused until credentials are saved.
       # DASHBOARD_USERNAME: "admin"
       # DASHBOARD_PASSWORD: "${DASHBOARD_PASSWORD}"
     volumes:

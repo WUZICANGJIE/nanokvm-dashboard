@@ -11,7 +11,8 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .config import Settings
-from .models import DeviceInput, ImportData
+from .control import ControlError
+from .models import ControlCredentials, DeviceInput, ImportData, PasteText, PowerAction
 from .service import DashboardService
 from .store import Store
 
@@ -35,6 +36,12 @@ def create_app(settings: Settings | None = None, service_factory=DashboardServic
         title="NanoKVM Dashboard", version=__version__, lifespan=lifespan,
         docs_url=None, redoc_url=None,
     )
+
+    def stored_device(request: Request, device_id: str):
+        device = request.app.state.service.store.get(device_id)
+        if device is None:
+            raise HTTPException(404, "Device not found")
+        return device
 
     @app.middleware("http")
     async def access_control(request: Request, call_next):
@@ -91,6 +98,8 @@ def create_app(settings: Settings | None = None, service_factory=DashboardServic
         service = request.app.state.service
         return {
             "devices": service.store.list(), "discovery": service.status(), "version": __version__,
+            "control_available": service.control is not None,
+            "dashboard_auth": bool(service.settings.username),
         }
 
     @app.post("/api/devices", status_code=201)
@@ -119,8 +128,52 @@ def create_app(settings: Settings | None = None, service_factory=DashboardServic
 
     @app.delete("/api/devices/{device_id}")
     async def delete_device(device_id: str, request: Request):
-        if not request.app.state.service.store.delete(device_id):
+        service = request.app.state.service
+        device = service.store.get(device_id)
+        if device and service.control:
+            # Drop the cached device session along with the record.
+            service.control.forget(device["url"])
+        if not service.store.delete(device_id):
             raise HTTPException(404, "Device not found")
+        return {"ok": True}
+
+    @app.post("/api/devices/{device_id}/control")
+    async def enable_control(device_id: str, data: ControlCredentials, request: Request):
+        """Verify a NanoKVM login against the device, then store it for control commands."""
+        service = request.app.state.service
+        device = stored_device(request, device_id)
+        if service.control is None:
+            raise HTTPException(403, "Control is disabled in this deployment.")
+        try:
+            return await service.enable_control(device, data.username, data.password)
+        except ControlError as error:
+            raise HTTPException(400, str(error)) from error
+
+    @app.delete("/api/devices/{device_id}/control")
+    async def disable_control(device_id: str, request: Request):
+        service = request.app.state.service
+        stored_device(request, device_id)
+        service.disable_control(device_id)
+        return {"ok": True}
+
+    @app.post("/api/devices/{device_id}/power")
+    async def power(device_id: str, data: PowerAction, request: Request):
+        service = request.app.state.service
+        device = stored_device(request, device_id)
+        try:
+            await service.power(device, data.action, data.duration)
+        except ControlError as error:
+            raise HTTPException(502, str(error)) from error
+        return {"ok": True}
+
+    @app.post("/api/devices/{device_id}/paste")
+    async def paste(device_id: str, data: PasteText, request: Request):
+        service = request.app.state.service
+        device = stored_device(request, device_id)
+        try:
+            await service.paste(device, data.text)
+        except ControlError as error:
+            raise HTTPException(502, str(error)) from error
         return {"ok": True}
 
     @app.post("/api/discovery", status_code=202)

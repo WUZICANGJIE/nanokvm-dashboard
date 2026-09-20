@@ -3,6 +3,7 @@ import logging
 from urllib.parse import urlsplit
 
 from .config import Settings
+from .control import ControlClient, ControlError, CredentialVault
 from .discovery import Discovery, address_url
 from .probe import Prober
 from .store import Store, now
@@ -11,11 +12,16 @@ logger = logging.getLogger(__name__)
 
 
 class DashboardService:
-    def __init__(self, settings: Settings, store: Store, discovery=None, prober=None):
+    def __init__(self, settings: Settings, store: Store, discovery=None, prober=None, control=None):
         self.settings = settings
         self.store = store
         self.discovery = discovery or Discovery(settings.mdns_interfaces)
         self.prober = prober or Prober(settings.probe_timeout)
+        self.control = control or (
+            ControlClient(settings.probe_timeout) if settings.allow_control else None
+        )
+        self.vault = CredentialVault(settings.data_dir)
+        self.control_limiter = asyncio.Semaphore(4)
         self.scan_task = None
         self.refresh_task = None
         self.periodic_task = None
@@ -34,6 +40,8 @@ class DashboardService:
         await asyncio.gather(*tasks, return_exceptions=True)
         await self.discovery.close()
         await self.prober.close()
+        if self.control:
+            await self.control.close()
 
     def status(self):
         return {
@@ -58,6 +66,77 @@ class DashboardService:
     def request_refresh(self):
         if not self.refresh_task or self.refresh_task.done():
             self.refresh_task = asyncio.create_task(self._refresh())
+
+    def _credentials(self, device):
+        """Decrypted device login, or None when control is not configured or readable."""
+        if not (self.control and device.get("control")):
+            return None
+        saved = self.store.credentials(device["id"])
+        if not saved:
+            return None
+        username, encrypted = saved
+        password = self.vault.decrypt(encrypted)
+        return (username, password) if password else None
+
+    def _require_credentials(self, device):
+        control = self.control
+        if control is None:
+            raise ControlError("Control is disabled in this deployment.")
+        credentials = self._credentials(device)
+        if credentials is None:
+            raise ControlError("No usable NanoKVM credentials are stored for this device.")
+        return control, credentials[0], credentials[1]
+
+    async def enable_control(self, device, username, password):
+        """Verify the login against the device, then store it for later commands."""
+        if not self.control:
+            raise ControlError("Control is disabled in this deployment.")
+        await self.control.verify(device["url"], username, password, device["addresses"])
+        self.store.set_credentials(device["id"], username, self.vault.encrypt(password))
+        await self._poll_control(self.store.get(device["id"]))
+        return self.store.get(device["id"])
+
+    def disable_control(self, device_id):
+        device = self.store.get(device_id)
+        if device and self.control:
+            self.control.forget(device["url"])
+        self.store.clear_credentials(device_id)
+        return self.store.get(device_id)
+
+    async def power(self, device, action, duration=None):
+        control, username, password = self._require_credentials(device)
+        await control.press(
+            device["url"], username, password, action, duration, device["addresses"],
+        )
+        await self._poll_control(device)
+
+    async def paste(self, device, text):
+        control, username, password = self._require_credentials(device)
+        await control.paste(device["url"], username, password, text, device["addresses"])
+
+    async def _poll_control(self, device):
+        """Read the power LED and version of one device; never raise into the refresh loop."""
+        if not (self.control and device and device.get("control")):
+            return
+        credentials = self._credentials(device)
+        if credentials is None:
+            self.store.record_control(
+                device["id"], "", device.get("app_version") or "",
+                "Stored credentials cannot be decrypted; save them again.",
+            )
+            return
+        username, password = credentials
+        async with self.control_limiter:
+            try:
+                state = await self.control.state(
+                    device["url"], username, password, device["addresses"],
+                )
+            except ControlError as error:
+                self.store.record_control(
+                    device["id"], "", device.get("app_version") or "", str(error)[:200],
+                )
+                return
+        self.store.record_control(device["id"], state.power_state, state.application)
 
     async def _periodic(self):
         next_scan = next_probe = 0
@@ -138,6 +217,10 @@ class DashboardService:
                         device["id"], result.online, result.latency_ms, result.error,
                         result.url if result.online else None,
                     )
+                    # Power state and version come from the device's own API, and only for
+                    # devices whose credentials the user stored.
+                    if result.online and latest.get("control"):
+                        await self._poll_control(latest)
         try:
             await asyncio.gather(*(check(device) for device in self.store.list()))
         except Exception:

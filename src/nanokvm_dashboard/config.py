@@ -12,6 +12,7 @@ class Settings:
     discovery_seconds: float = 5
     probe_interval: float = 30
     probe_timeout: float = 3
+    allow_control: bool = True
     username: str = ""
     password: str = ""
 
@@ -29,6 +30,7 @@ class Settings:
             discovery_seconds=min(30, max(2, float(os.getenv("DISCOVERY_SECONDS", "5")))),
             probe_interval=max(10, float(os.getenv("PROBE_INTERVAL", "30"))),
             probe_timeout=min(15, max(1, float(os.getenv("PROBE_TIMEOUT", "3")))),
+            allow_control=os.getenv("ALLOW_CONTROL", "true").lower() not in {"0", "false", "no"},
             username=os.getenv("DASHBOARD_USERNAME", ""),
             password=os.getenv("DASHBOARD_PASSWORD", ""),
         )
