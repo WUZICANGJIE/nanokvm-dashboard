@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Container version="2">
   <Name>nanokvm-dashboard</Name>
-  <Repository>wuzicangjie/nanokvm-dashboard:latest</Repository>
-  <Registry>https://hub.docker.com/r/wuzicangjie/nanokvm-dashboard</Registry>
+  <Repository>ghcr.io/wuzicangjie/nanokvm-dashboard:latest</Repository>
+  <Registry>https://github.com/WUZICANGJIE/nanokvm-dashboard/pkgs/container/nanokvm-dashboard</Registry>
   <Network>host</Network>
   <Privileged>false</Privileged>
   <Support>https://github.com/WUZICANGJIE/nanokvm-dashboard/issues</Support>

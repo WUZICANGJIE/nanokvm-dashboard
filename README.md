@@ -43,10 +43,10 @@
 
 ## Unraid 安装
 
-Docker Hub 镜像发布后使用：
+GHCR 镜像发布后使用：
 
 ```text
-wuzicangjie/nanokvm-dashboard:latest
+ghcr.io/wuzicangjie/nanokvm-dashboard:latest
 ```
 
 在 **Docker → Add Container** 填写：
@@ -54,7 +54,7 @@ wuzicangjie/nanokvm-dashboard:latest
 | 项目 | 值 |
 |---|---|
 | Name | `nanokvm-dashboard` |
-| Repository | `wuzicangjie/nanokvm-dashboard:latest` |
+| Repository | `ghcr.io/wuzicangjie/nanokvm-dashboard:latest` |
 | Network Type | **Host** |
 | WebUI | `http://[IP]:[PORT:8080]/` |
 | Path: 容器路径 | `/data` |
@@ -163,16 +163,11 @@ uv run python scripts/discover_once.py --interface 192.168.1.10
 
 NixOS 开发 shell 中使用 `ruff check .`，避免运行 PyPI wheel 中针对通用 Linux 的 ruff 可执行文件。
 
-## GitHub Actions → Docker Hub
+## GitHub Actions → GHCR
 
 CI 会运行 Python lint、测试、打包、浏览器检查、Docker 构建和容器健康检查。
 
-发布前，在 GitHub 仓库中配置：
-
-1. **Settings → Secrets and variables → Actions → Variables**：
-   - `DOCKERHUB_USERNAME` = `wuzicangjie`
-2. 同页面的 **Secrets**：
-   - `DOCKERHUB_TOKEN` = Docker Hub 的 Read & Write 访问令牌。
+镜像发布到 **GitHub Container Registry**（`ghcr.io/wuzicangjie/nanokvm-dashboard`），不需要配置任何 secret：工作流用仓库自带的 `GITHUB_TOKEN` 登录，`publish` job 已声明 `packages: write` 权限。
 
 工作流发布 `linux/amd64` 和 `linux/arm64` 镜像：
 
@@ -180,9 +175,10 @@ CI 会运行 Python lint、测试、打包、浏览器检查、Docker 构建和�
 - 推送 `v*` 版本标签：发布对应版本标签。
 - 手动运行工作流：对 main 同样可以发布。
 - PR：执行检查，不发布。
-- 未配置 Docker Hub 令牌：仍执行构建测试，发布步骤明确跳过。
 
-令牌始终由 GitHub Secrets 注入。不要把令牌写进仓库、Compose 文件或镜像。
+首次发布后到 **Packages → 包设置** 确认可见性：设为 public 时任何人无需登录即可 `docker pull`；保持 private 则拉取方需要带 `read:packages` 权限的 GitHub 令牌。
+
+从 Docker Hub 迁移过来的话：`compose.yaml`、Unraid 模板与本文档的镜像名都已改为 `ghcr.io/...`。只改镜像名不会影响正在运行的容器——Unraid 需要按模板**重建一次**容器，之后更新继续走 Docker 页面的检查更新。原 Docker Hub 仓库可以保留（旧镜像）或删除。
 
 ## License
 

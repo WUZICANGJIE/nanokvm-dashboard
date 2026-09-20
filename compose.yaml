@@ -1,6 +1,6 @@
 services:
   nanokvm-dashboard:
-    image: wuzicangjie/nanokvm-dashboard:latest
+    image: ghcr.io/wuzicangjie/nanokvm-dashboard:latest
     container_name: nanokvm-dashboard
     network_mode: host
     restart: unless-stopped
